@@ -1,0 +1,131 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "io.qameta.allure:allure-gradle:2.8.1"
+        classpath 'com.github.jacobono:gradle-jaxb-plugin:1.3.5'
+    }
+}
+
+plugins {
+    id 'idea'
+    id 'java'
+    id 'io.qameta.allure' version '2.8.1'
+    id "org.gradle.test-retry" version "1.3.1"
+    id 'eclipse'
+    id 'java-library'
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+    mavenLocal()
+    maven {
+        url 'https://dl.bintray.com/qameta/maven-unstable/'
+    }
+
+}
+
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+
+group 'vk.practice'
+version '1.0-SNAPSHOT'
+
+def allureVersion = '2.17.3',
+    junitVersion = '5.8.2',
+    selenideVersion = '5.25.0',
+    junitPlatformVersion = '1.8.2'
+
+allure {
+    version = allureVersion
+    autoconfigure = false
+    aspectjweaver = true
+    configuration = "testImplementation"
+
+    resultsDir = file("${projectDir}/build/allure-results")
+
+    reportDir = file("${projectDir}/build/reports/allure-report")
+
+    useJUnit5 {
+        version = allureVersion
+    }
+}
+
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+    testImplementation 'org.junit.platform:junit-platform-runner:1.9.2'
+    testImplementation 'org.junit.platform:junit-platform-suite-api:1.9.2'
+    testImplementation 'io.qameta.allure:allure-commandline:2.21.0'
+
+    implementation 'io.github.bonigarcia:webdrivermanager:5.1.1'
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+    testImplementation 'com.codeborne:phantomjsdriver:1.5.0'
+
+    testImplementation 'org.junit.platform:junit-platform-testkit:1.9.2'
+    testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.9.2'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+
+    testImplementation(
+            //selenide
+            "com.codeborne:selenide:$selenideVersion",
+            //Allure
+            "io.qameta.allure:allure-java-commons:${allureVersion}",
+            'org.aspectj:aspectjweaver:1.9.9.1',
+            //configs
+            "org.aeonbits.owner:owner:1.0.12",
+            //json
+            "com.googlecode.json-simple:json-simple:1.1.1",
+            //logs
+            'org.apache.logging.log4j:log4j-core:2.20.0',
+            'org.jetbrains:annotations:22.0.0')
+
+    testRuntime 'com.browserup:browserup-proxy-core:2.1.2'
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:${junitPlatformVersion}")
+    implementation(
+            //JUnit
+            "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    )
+    implementation("io.qameta.allure:allure-junit5:${allureVersion}") {
+        exclude group: "org.junit.platform"
+        exclude group: "org.junit.jupiter"
+    }
+}
+
+test {
+    description "Запуск тестов"
+    useJUnit()
+    useJUnitPlatform()
+    //exclude ''
+
+    filter {
+        //include all tests from package
+        includeTestsMatching "testscripts.*"
+    }
+
+    /*    retry{
+        maxRetries = 2
+    }*/
+    systemProperties([
+            // Configuration parameters to execute top-level classes in parallel but methods in same thread
+            'junit.jupiter.execution.parallel.enabled': 'false',
+            'junit.jupiter.execution.parallel.mode.default': 'concurrent',
+            'junit.jupiter.execution.parallel.mode.classes.default': 'concurrent',
+            'junit.jupiter.execution.parallel.config.strategy':'fixed',
+            'junit.jupiter.execution.parallel.config.fixed.parallelism':'25'
+    ])
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+
+    forkEvery=1
+
+    testLogging {
+        events "FAILED", "PASSED", "SKIPPED"
+    }
+}
